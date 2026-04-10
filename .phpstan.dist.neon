@@ -35,4 +35,6 @@ parameters:
 
     ignoreErrors:
         - identifier: missingType.iterableValue
-        - identifier: property.missingOverride
+        -
+            identifier: property.missingOverride
+            reportUnmatched: false
