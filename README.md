@@ -6,7 +6,9 @@
 
 **Przelewy24** payment gateway integration for [Maho Commerce](https://mahocommerce.com).
 
-Accept payments via bank transfers, cards, BLIK, and other popular Polish payment methods through [Przelewy24](https://www.przelewy24.pl).
+Accept payments through [Przelewy24](https://www.przelewy24.pl), one of Poland's most popular payment gateways.
+
+> **Note:** This module currently supports the **gateway redirect** flow only — the customer is redirected to Przelewy24's hosted payment page to choose their payment method. Direct card payments, BLIK, Google Pay, and Apple Pay are planned for future releases.
 
 ## Features
 
@@ -86,6 +88,13 @@ https://your-store.com/przelewy24/webhook/refund
 ## Supported Currencies
 
 All currencies supported by your Przelewy24 merchant account. Amounts are converted to grosze (1/100) for API communication.
+
+## Roadmap
+
+- [ ] BLIK (inline 6-digit code entry at checkout)
+- [ ] Direct card payments (Przelewy24 iframe)
+- [ ] Google Pay
+- [ ] Apple Pay
 
 ## License
 
