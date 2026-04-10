@@ -15,7 +15,6 @@ class Maho_Przelewy24_Helper_Data extends Mage_Core_Helper_Abstract
     public const API_URL_LIVE = 'https://secure.przelewy24.pl';
     public const API_URL_SANDBOX = 'https://sandbox.przelewy24.pl';
 
-    #[\Override]
     protected $_moduleName = 'Maho_Przelewy24';
 
     public function getMerchantId(?int $storeId = null): int
