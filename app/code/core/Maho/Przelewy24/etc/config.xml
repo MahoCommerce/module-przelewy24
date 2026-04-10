@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Maho
+ *
+ * @package    Maho_Przelewy24
+ * @copyright  Copyright (c) 2026 Maho (https://mahocommerce.com)
+ * @license    https://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ */
+-->
+<config>
+    <modules>
+        <Maho_Przelewy24>
+            <version>1.0.0</version>
+        </Maho_Przelewy24>
+    </modules>
+
+    <global>
+        <models>
+            <maho_przelewy24>
+                <class>Maho_Przelewy24_Model</class>
+            </maho_przelewy24>
+        </models>
+
+        <blocks>
+            <maho_przelewy24>
+                <class>Maho_Przelewy24_Block</class>
+            </maho_przelewy24>
+        </blocks>
+
+        <helpers>
+            <maho_przelewy24>
+                <class>Maho_Przelewy24_Helper</class>
+            </maho_przelewy24>
+        </helpers>
+    </global>
+
+    <crontab>
+        <jobs>
+            <maho_przelewy24_check_pending_payments>
+                <schedule>
+                    <cron_expr>*/5 * * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>maho_przelewy24/cron::checkPendingPayments</model>
+                </run>
+            </maho_przelewy24_check_pending_payments>
+        </jobs>
+    </crontab>
+
+    <frontend>
+        <routers>
+            <przelewy24>
+                <use>standard</use>
+                <args>
+                    <module>Maho_Przelewy24</module>
+                    <frontName>przelewy24</frontName>
+                </args>
+            </przelewy24>
+        </routers>
+        <secure_url>
+            <maho_przelewy24_payment>/przelewy24/payment</maho_przelewy24_payment>
+            <maho_przelewy24_webhook>/przelewy24/webhook</maho_przelewy24_webhook>
+        </secure_url>
+        <translate>
+            <modules>
+                <Maho_Przelewy24>
+                    <files>
+                        <default>Maho_Przelewy24.csv</default>
+                    </files>
+                </Maho_Przelewy24>
+            </modules>
+        </translate>
+    </frontend>
+
+    <default>
+        <maho_przelewy24>
+            <credentials>
+                <sandbox>1</sandbox>
+                <merchant_id backend_model="adminhtml/system_config_backend_encrypted"/>
+                <pos_id backend_model="adminhtml/system_config_backend_encrypted"/>
+                <crc_key backend_model="adminhtml/system_config_backend_encrypted"/>
+                <api_key backend_model="adminhtml/system_config_backend_encrypted"/>
+            </credentials>
+        </maho_przelewy24>
+        <payment>
+            <przelewy24>
+                <active>0</active>
+                <model>maho_przelewy24/method_standard</model>
+                <title>Przelewy24</title>
+                <group>przelewy24</group>
+                <allowspecific>0</allowspecific>
+                <sort_order>100</sort_order>
+            </przelewy24>
+        </payment>
+    </default>
+</config>
