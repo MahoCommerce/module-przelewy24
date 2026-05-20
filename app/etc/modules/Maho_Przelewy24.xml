@@ -12,7 +12,7 @@
     <modules>
         <Maho_Przelewy24>
             <active>true</active>
-            <codePool>core</codePool>
+            <codePool>community</codePool>
             <depends>
                 <Mage_Payment/>
                 <Mage_Sales/>
