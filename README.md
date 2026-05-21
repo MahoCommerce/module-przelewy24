@@ -1,8 +1,9 @@
 # Maho Przelewy24
 
+![Maho Commerce](https://img.shields.io/badge/Maho_Commerce-module-orange)
 ![License](https://img.shields.io/badge/license-OSL--3.0-blue)
 ![PHP](https://img.shields.io/badge/php-%3E%3D8.3-8892BF)
-![Maho Commerce](https://img.shields.io/badge/Maho_Commerce-module-orange)
+![PHPStan Level](https://img.shields.io/badge/PHPStan-level%208-brightgreen)
 
 **Przelewy24** payment gateway integration for [Maho Commerce](https://mahocommerce.com).
 
