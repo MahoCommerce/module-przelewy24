@@ -1,4 +1,5 @@
 "Cannot refund: missing Przelewy24 transaction data.","Cannot refund: missing Przelewy24 transaction data."
+"Only available at checkout when the quote currency is PLN; hidden otherwise.","Only available at checkout when the quote currency is PLN; hidden otherwise."
 "Order #%s","Order #%s"
 "Please complete the Przelewy24 payment before placing the order.","Please complete the Przelewy24 payment before placing the order."
 "Przelewy24","Przelewy24"
