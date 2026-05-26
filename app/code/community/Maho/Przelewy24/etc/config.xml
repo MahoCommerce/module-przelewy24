@@ -11,7 +11,7 @@
 <config>
     <modules>
         <Maho_Przelewy24>
-            <version>2.0.0</version>
+            <version>2.1.0</version>
         </Maho_Przelewy24>
     </modules>
 
@@ -91,6 +91,8 @@
                 <group>przelewy24</group>
                 <allowspecific>0</allowspecific>
                 <sort_order>100</sort_order>
+                <order_status_pending>pending_payment</order_status_pending>
+                <order_status_processing>processing</order_status_processing>
             </przelewy24>
         </payment>
     </default>

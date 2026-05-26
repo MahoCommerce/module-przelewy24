@@ -111,4 +111,24 @@ class Maho_Przelewy24_Helper_Data extends Mage_Core_Helper_Abstract
     {
         return $orderIncrementId . '_' . bin2hex(random_bytes(4));
     }
+
+    /**
+     * Status code applied while the customer is at the P24 checkout.
+     * Falls back to 'pending_payment' if the config is missing.
+     */
+    public function getPendingStatus(?int $storeId = null): string
+    {
+        $status = (string) Mage::getStoreConfig('payment/przelewy24/order_status_pending', $storeId);
+        return $status !== '' ? $status : 'pending_payment';
+    }
+
+    /**
+     * Status code applied after P24 confirms the payment.
+     * Falls back to 'processing' if the config is missing.
+     */
+    public function getProcessingStatus(?int $storeId = null): string
+    {
+        $status = (string) Mage::getStoreConfig('payment/przelewy24/order_status_processing', $storeId);
+        return $status !== '' ? $status : 'processing';
+    }
 }
