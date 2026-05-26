@@ -86,6 +86,19 @@ class Maho_Przelewy24_Model_Cron
             $payment->registerCaptureNotification((float) $amount / 100);
             $order->save();
 
+            // registerCaptureNotification puts the order in STATE_PROCESSING with
+            // the default processing status. Apply the merchant-configured status
+            // (which may differ) while leaving the state as-is.
+            $processingStatus = $helper->getProcessingStatus($storeId);
+            if ($processingStatus !== '' && $processingStatus !== (string) $order->getStatus()) {
+                $order->setStatus($processingStatus);
+                $order->addStatusHistoryComment(
+                    $helper->__('Order status set to "%s" per Przelewy24 configuration.', $processingStatus),
+                    $processingStatus,
+                )->setIsCustomerNotified(false);
+                $order->save();
+            }
+
             Mage::log(
                 "Przelewy24 cron: captured payment for order #{$order->getIncrementId()} (p24 orderId={$p24OrderId})",
                 Mage::LOG_INFO,
