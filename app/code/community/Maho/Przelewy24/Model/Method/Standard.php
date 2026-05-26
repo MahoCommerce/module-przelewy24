@@ -17,6 +17,13 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
     protected $_formBlockType = 'maho_przelewy24/form';
     protected $_infoBlockType = 'maho_przelewy24/info';
 
+    /**
+     * P24 only settles in PLN. If the quote currency isn't PLN the method is
+     * hidden from checkout — otherwise we'd silently convert and the customer
+     * would see a different number on the P24 redirect page.
+     */
+    protected string $_requiredCurrency = 'PLN';
+
     protected $_isGateway = true;
     protected $_canAuthorize = false;
     protected $_canCapture = true;
@@ -34,6 +41,11 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
     public function isAvailable($quote = null): bool
     {
         if (!$this->_getP24Helper()->hasCredentials($quote?->getStoreId())) {
+            return false;
+        }
+        if ($quote !== null
+            && strtoupper((string) $quote->getQuoteCurrencyCode()) !== $this->_requiredCurrency
+        ) {
             return false;
         }
         return parent::isAvailable($quote);
@@ -80,8 +92,8 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
         }
 
         $sessionId = $helper->generateSessionId($order->getIncrementId());
-        $amount = $helper->toGrosze($order->getBaseGrandTotal());
-        $currency = $order->getBaseCurrencyCode();
+        $amount = $helper->toGrosze((float) $order->getGrandTotal());
+        $currency = (string) $order->getOrderCurrencyCode();
 
         $billingAddress = $order->getBillingAddress();
         if (!$billingAddress) {
