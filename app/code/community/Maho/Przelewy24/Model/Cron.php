@@ -34,7 +34,7 @@ class Maho_Przelewy24_Model_Cron
 
         foreach ($orders as $order) {
             try {
-                $this->_checkOrder($order);
+                $this->processPaymentStatus($order);
             } catch (\Throwable $e) {
                 Mage::log(
                     "Przelewy24 cron: error checking order #{$order->getIncrementId()}: {$e->getMessage()}",
@@ -45,8 +45,17 @@ class Maho_Przelewy24_Model_Cron
         }
     }
 
-    protected function _checkOrder(Mage_Sales_Model_Order $order): void
+    /**
+     * Poll P24 for the transaction status of a pending order and finalize it
+     * (capture or cancel). Called from cron and from the return-from-P24 flow,
+     * so it must be a no-op for orders already past pending_payment.
+     */
+    public function processPaymentStatus(Mage_Sales_Model_Order $order): void
     {
+        if ($order->getState() !== Mage_Sales_Model_Order::STATE_PENDING_PAYMENT) {
+            return;
+        }
+
         $payment = $order->getPayment();
         if (!$payment) {
             return;
@@ -100,14 +109,22 @@ class Maho_Przelewy24_Model_Cron
             }
 
             Mage::log(
-                "Przelewy24 cron: captured payment for order #{$order->getIncrementId()} (p24 orderId={$p24OrderId})",
+                "Przelewy24: captured payment for order #{$order->getIncrementId()} (p24 orderId={$p24OrderId})",
                 Mage::LOG_INFO,
                 'przelewy24.log',
             );
         } elseif ($status === 3) {
             $order->cancel()->save();
+
+            // Reactivate the quote so the customer can resume checkout (possibly
+            // with a different payment method) without having to rebuild their cart.
+            $quote = Mage::getModel('sales/quote')->load($order->getQuoteId());
+            if ($quote->getId()) {
+                $quote->setIsActive(1)->setReservedOrderId('')->save();
+            }
+
             Mage::log(
-                "Przelewy24 cron: cancelled order #{$order->getIncrementId()} (payment returned)",
+                "Przelewy24: cancelled order #{$order->getIncrementId()} (payment returned)",
                 Mage::LOG_INFO,
                 'przelewy24.log',
             );

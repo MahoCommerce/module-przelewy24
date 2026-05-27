@@ -58,11 +58,40 @@ class Maho_Przelewy24_PaymentController extends Mage_Core_Controller_Front_Actio
 
     /**
      * Customer returns here after completing (or attempting) payment on P24.
+     *
+     * P24 redirects here for both successful and failed payments, so we can't
+     * trust the URL alone. We query P24 for the actual transaction status and
+     * finalize the order (capture or cancel) right here — instead of waiting
+     * for the urlStatus webhook, which may be delayed or unreachable (sandbox,
+     * local dev, firewalled servers).
      */
     public function successAction(): void
     {
         $session = Mage::getSingleton('checkout/session');
         $session->setQuoteId($session->getPrzelewy24QuoteId(true));
+
+        $orderIncrementId = $session->getLastRealOrderId();
+        $order = $orderIncrementId
+            ? Mage::getModel('sales/order')->loadByIncrementId($orderIncrementId)
+            : null;
+
+        if ($order && $order->getId()) {
+            try {
+                Mage::getModel('maho_przelewy24/cron')->processPaymentStatus($order);
+            } catch (\Throwable $e) {
+                Mage::logException($e);
+            }
+
+            if ($order->isCanceled()) {
+                $this->_restoreCart($order);
+                Mage::getSingleton('core/session')->addError(
+                    Mage::helper('maho_przelewy24')->__('Payment was not completed.'),
+                );
+                $this->_redirect('checkout/cart');
+                return;
+            }
+        }
+
         $session->getQuote()->setIsActive(0)->save();
         $this->_redirect('checkout/onepage/success', ['_secure' => true]);
     }
