@@ -33,6 +33,12 @@
                 <class>Maho_Przelewy24_Helper</class>
             </maho_przelewy24>
         </helpers>
+
+        <payment>
+            <groups>
+                <maho_przelewy24>Przelewy24</maho_przelewy24>
+            </groups>
+        </payment>
     </global>
 
     <crontab>
@@ -88,7 +94,7 @@
                 <active>0</active>
                 <model>maho_przelewy24/method_standard</model>
                 <title>Przelewy24</title>
-                <group>przelewy24</group>
+                <group>maho_przelewy24</group>
                 <allowspecific>0</allowspecific>
                 <sort_order>100</sort_order>
                 <order_status_pending>pending_payment</order_status_pending>
