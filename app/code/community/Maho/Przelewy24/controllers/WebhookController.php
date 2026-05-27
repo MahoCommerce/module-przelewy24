@@ -55,6 +55,20 @@ class Maho_Przelewy24_WebhookController extends Mage_Core_Controller_Front_Actio
             return;
         }
 
+        // Order may already have been finalized by successAction or an earlier
+        // webhook delivery. Acknowledge with 200 so P24 doesn't keep retrying,
+        // but don't re-process — registerCaptureNotification on an already-
+        // captured order would flip it into PAYMENT_REVIEW with fraud flagged.
+        if ($order->getState() !== Mage_Sales_Model_Order::STATE_PENDING_PAYMENT) {
+            Mage::log(
+                "Przelewy24 webhook: order #{$order->getIncrementId()} already in state '{$order->getState()}', skipping",
+                Mage::LOG_INFO,
+                'przelewy24.log',
+            );
+            $this->getResponse()->setHttpResponseCode(200);
+            return;
+        }
+
         $storeId = (int) $order->getStoreId();
         $crcKey = $helper->getCrcKey($storeId);
 

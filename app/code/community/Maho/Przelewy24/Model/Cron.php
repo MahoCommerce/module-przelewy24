@@ -63,6 +63,11 @@ class Maho_Przelewy24_Model_Cron
 
         $sessionId = $payment->getAdditionalInformation('p24_session_id');
         if (!$sessionId) {
+            Mage::log(
+                "Przelewy24: no p24_session_id on order #{$order->getIncrementId()}, skipping",
+                Mage::LOG_WARNING,
+                'przelewy24.log',
+            );
             return;
         }
 
@@ -73,7 +78,18 @@ class Maho_Przelewy24_Model_Cron
         $result = $api->getTransactionBySessionId($sessionId);
         $status = (int) ($result['data']['status'] ?? 0);
 
-        if ($status === 2) {
+        // P24 transaction status (per the REST API spec at developers.przelewy24.pl):
+        //   0 - no payment        (customer hasn't paid)
+        //   1 - advance payment   (customer paid; merchant verify still pending)
+        //   2 - payment made      (merchant verify completed)
+        //   3 - payment returned  (rejected / cancelled by P24)
+        //
+        // Both 1 and 2 mean the customer's money is at P24. The difference is
+        // whether we've already called verify (which is what actually triggers
+        // settlement to the merchant). In sandbox/local-dev setups the urlStatus
+        // webhook often doesn't reach the merchant, so we may need to call verify
+        // ourselves here on status 1.
+        if ($status === 1 || $status === 2) {
             /** @var Maho_Przelewy24_Helper_Data $helper */
             $helper = Mage::helper('maho_przelewy24');
 
@@ -81,14 +97,16 @@ class Maho_Przelewy24_Model_Cron
             $amount = (int) ($result['data']['amount'] ?? 0);
             $currency = $result['data']['currency'] ?? $order->getBaseCurrencyCode();
 
-            $api->verifyTransaction([
-                'merchantId' => $helper->getMerchantId($storeId),
-                'posId' => $helper->getPosId($storeId),
-                'sessionId' => $sessionId,
-                'amount' => $amount,
-                'currency' => $currency,
-                'orderId' => $p24OrderId,
-            ]);
+            if ($status === 1) {
+                $api->verifyTransaction([
+                    'merchantId' => $helper->getMerchantId($storeId),
+                    'posId' => $helper->getPosId($storeId),
+                    'sessionId' => $sessionId,
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'orderId' => $p24OrderId,
+                ]);
+            }
 
             $payment->setAdditionalInformation('p24_order_id', $p24OrderId);
             $payment->save();
@@ -125,6 +143,12 @@ class Maho_Przelewy24_Model_Cron
 
             Mage::log(
                 "Przelewy24: cancelled order #{$order->getIncrementId()} (payment returned)",
+                Mage::LOG_INFO,
+                'przelewy24.log',
+            );
+        } else {
+            Mage::log(
+                "Przelewy24: no action for order #{$order->getIncrementId()} (P24 status={$status})",
                 Mage::LOG_INFO,
                 'przelewy24.log',
             );

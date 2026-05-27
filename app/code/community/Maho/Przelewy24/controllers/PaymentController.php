@@ -82,7 +82,13 @@ class Maho_Przelewy24_PaymentController extends Mage_Core_Controller_Front_Actio
                 Mage::logException($e);
             }
 
-            if ($order->isCanceled()) {
+            // Either P24 reported the payment as returned (status 3, already
+            // cancelled by processPaymentStatus) or the customer came back
+            // without paying (status 0 — left order in pending_payment).
+            // Both mean: don't show success, restore cart, bounce to checkout.
+            if ($order->isCanceled()
+                || $order->getState() === Mage_Sales_Model_Order::STATE_PENDING_PAYMENT
+            ) {
                 $this->_restoreCart($order);
                 Mage::getSingleton('core/session')->addError(
                     Mage::helper('maho_przelewy24')->__('Payment was not completed.'),
