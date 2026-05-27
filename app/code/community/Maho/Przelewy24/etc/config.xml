@@ -97,6 +97,7 @@
                 <group>maho_przelewy24</group>
                 <allowspecific>0</allowspecific>
                 <sort_order>100</sort_order>
+                <payment_action>order</payment_action>
                 <order_status_pending>pending_payment</order_status_pending>
                 <order_status_processing>processing</order_status_processing>
             </przelewy24>
