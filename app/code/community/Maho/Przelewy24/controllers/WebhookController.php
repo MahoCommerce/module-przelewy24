@@ -113,7 +113,14 @@ class Maho_Przelewy24_WebhookController extends Mage_Core_Controller_Front_Actio
             $payment->setAdditionalInformation('p24_statement', $data['statement'] ?? null);
             $payment->save();
 
-            $payment->registerCaptureNotification((float) $amount / 100);
+            // P24 charges (and returns) the amount in the order currency, but
+            // registerCaptureNotification() expects a base-currency amount: it
+            // compares against getBaseGrandTotal() in _isCaptureFinal() and stores
+            // it as base_amount_paid_online. When base currency != order currency
+            // (e.g. base EUR, order PLN) the order-currency amount never matches,
+            // so the invoice is skipped and the order is wrongly flagged as fraud.
+            // P24 always settles the full order, so register the full base total.
+            $payment->registerCaptureNotification((float) $order->getBaseGrandTotal());
             $order->save();
 
             // registerCaptureNotification puts the order in STATE_PROCESSING with
