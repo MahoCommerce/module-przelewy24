@@ -90,53 +90,32 @@ class Maho_Przelewy24_WebhookController extends Mage_Core_Controller_Front_Actio
             return;
         }
 
+        $payment = $order->getPayment();
+        if (!$payment) {
+            $this->getResponse()->setHttpResponseCode(500);
+            return;
+        }
+
         try {
-            /** @var Maho_Przelewy24_Model_Api $api */
-            $api = Mage::getModel('maho_przelewy24/api', ['store_id' => $storeId]);
-            $api->verifyTransaction([
-                'merchantId' => $helper->getMerchantId($storeId),
-                'posId' => $helper->getPosId($storeId),
-                'sessionId' => $sessionId,
+            // captureOrder verifies the transaction and validates the amount
+            // against what we charged before capturing — a valid signature only
+            // proves P24 sent the data, not that the amount is correct. A
+            // mismatch (e.g. the sandbox "Incorrect amount" action) returns
+            // false: the order stays in pending_payment, but we still ack with
+            // 200 since retrying won't fix a wrong amount.
+            /** @var Maho_Przelewy24_Model_Method_Standard $method */
+            $method = $payment->getMethodInstance();
+            $captured = $method->captureOrder($order, [
+                'orderId' => $p24OrderId,
                 'amount' => $amount,
                 'currency' => $currency,
-                'orderId' => $p24OrderId,
-            ]);
+                'methodId' => $data['methodId'] ?? null,
+                'statement' => $data['statement'] ?? null,
+            ], true);
 
-            $payment = $order->getPayment();
-            if (!$payment) {
-                $this->getResponse()->setHttpResponseCode(500);
-                return;
+            if ($captured) {
+                Mage::log("Przelewy24 webhook: payment captured for order #{$order->getIncrementId()}", Mage::LOG_INFO, 'przelewy24.log');
             }
-
-            $payment->setAdditionalInformation('p24_order_id', $p24OrderId);
-            $payment->setAdditionalInformation('p24_method_id', $data['methodId'] ?? null);
-            $payment->setAdditionalInformation('p24_statement', $data['statement'] ?? null);
-            $payment->save();
-
-            // P24 charges (and returns) the amount in the order currency, but
-            // registerCaptureNotification() expects a base-currency amount: it
-            // compares against getBaseGrandTotal() in _isCaptureFinal() and stores
-            // it as base_amount_paid_online. When base currency != order currency
-            // (e.g. base EUR, order PLN) the order-currency amount never matches,
-            // so the invoice is skipped and the order is wrongly flagged as fraud.
-            // P24 always settles the full order, so register the full base total.
-            $payment->registerCaptureNotification((float) $order->getBaseGrandTotal());
-            $order->save();
-
-            // registerCaptureNotification puts the order in STATE_PROCESSING with
-            // the default processing status. Apply the merchant-configured status
-            // (which may differ) while leaving the state as-is.
-            $processingStatus = $helper->getProcessingStatus($storeId);
-            if ($processingStatus !== '' && $processingStatus !== (string) $order->getStatus()) {
-                $order->setStatus($processingStatus);
-                $order->addStatusHistoryComment(
-                    $helper->__('Order status set to "%s" per Przelewy24 configuration.', $processingStatus),
-                    $processingStatus,
-                )->setIsCustomerNotified(false);
-                $order->save();
-            }
-
-            Mage::log("Przelewy24 webhook: payment captured for order #{$order->getIncrementId()}", Mage::LOG_INFO, 'przelewy24.log');
             $this->getResponse()->setHttpResponseCode(200);
         } catch (\Throwable $e) {
             Mage::logException($e);

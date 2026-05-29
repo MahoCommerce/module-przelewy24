@@ -167,6 +167,105 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
     }
 
     /**
+     * Finalize a pending order from a confirmed P24 transaction.
+     *
+     * Shared by the urlStatus webhook (push) and Cron::processPaymentStatus
+     * (pull, also used on return from P24). Validates the reported amount and
+     * currency against what we registered the transaction with — on mismatch
+     * (e.g. the sandbox "Incorrect amount" action, tampering, or a P24-side
+     * error) the order is left untouched in pending_payment and false is
+     * returned. When the amount checks out it optionally verifies, captures
+     * the payment, and applies the merchant-configured processing status.
+     *
+     * @param array{orderId?: int, amount?: int, currency?: string, methodId?: mixed, statement?: mixed} $transaction
+     * @return bool true when the payment was captured, false when rejected
+     */
+    public function captureOrder(Mage_Sales_Model_Order $order, array $transaction, bool $verify): bool
+    {
+        $helper = $this->_getP24Helper();
+        $storeId = (int) $order->getStoreId();
+
+        $payment = $order->getPayment();
+        if (!$payment) {
+            return false;
+        }
+
+        $sessionId = (string) $payment->getAdditionalInformation('p24_session_id');
+        $p24OrderId = (int) ($transaction['orderId'] ?? 0);
+        $amount = (int) ($transaction['amount'] ?? 0);
+        $currency = (string) ($transaction['currency'] ?? $order->getOrderCurrencyCode());
+
+        // Guard against tampered / incorrect amounts (P24 sandbox "Incorrect
+        // amount" action, MITM, or P24-side error). The amount and currency we
+        // registered the transaction with are stored on the payment; a valid
+        // signature/status only proves P24 sent the data, not that it matches
+        // what we charged. On any mismatch leave the order in pending_payment
+        // so the customer sees "Payment was not completed" instead of shipping.
+        $expectedAmount = (int) $payment->getAdditionalInformation('p24_amount');
+        $expectedCurrency = (string) $payment->getAdditionalInformation('p24_currency');
+        if ($expectedAmount > 0
+            && ($amount !== $expectedAmount
+                || ($expectedCurrency !== '' && strcasecmp($currency, $expectedCurrency) !== 0))
+        ) {
+            Mage::log(
+                "Przelewy24: amount/currency mismatch for order #{$order->getIncrementId()} "
+                . "(expected {$expectedAmount} {$expectedCurrency}, got {$amount} {$currency}) — not capturing",
+                Mage::LOG_ERROR,
+                'przelewy24.log',
+            );
+            return false;
+        }
+
+        // Status 1 (advance payment) means the customer's money is at P24 but
+        // we haven't called verify yet, which is what actually settles it to
+        // the merchant. Status 2 is already verified, so skip it there.
+        if ($verify) {
+            $this->_getApi($storeId)->verifyTransaction([
+                'merchantId' => $helper->getMerchantId($storeId),
+                'posId' => $helper->getPosId($storeId),
+                'sessionId' => $sessionId,
+                'amount' => $amount,
+                'currency' => $currency,
+                'orderId' => $p24OrderId,
+            ]);
+        }
+
+        $payment->setAdditionalInformation('p24_order_id', $p24OrderId);
+        if (array_key_exists('methodId', $transaction)) {
+            $payment->setAdditionalInformation('p24_method_id', $transaction['methodId']);
+        }
+        if (array_key_exists('statement', $transaction)) {
+            $payment->setAdditionalInformation('p24_statement', $transaction['statement']);
+        }
+        $payment->save();
+
+        // P24 charges (and returns) the amount in the order currency, but
+        // registerCaptureNotification() expects a base-currency amount: it
+        // compares against getBaseGrandTotal() in _isCaptureFinal() and stores
+        // it as base_amount_paid_online. When base currency != order currency
+        // (e.g. base EUR, order PLN) the order-currency amount never matches,
+        // so the invoice is skipped and the order is wrongly flagged as fraud.
+        // P24 always settles the full order, so register the full base total.
+        $payment->registerCaptureNotification((float) $order->getBaseGrandTotal());
+        $order->save();
+
+        // registerCaptureNotification puts the order in STATE_PROCESSING with
+        // the default processing status. Apply the merchant-configured status
+        // (which may differ) while leaving the state as-is.
+        $processingStatus = $helper->getProcessingStatus($storeId);
+        if ($processingStatus !== '' && $processingStatus !== (string) $order->getStatus()) {
+            $order->setStatus($processingStatus);
+            $order->addStatusHistoryComment(
+                $helper->__('Order status set to "%s" per Przelewy24 configuration.', $processingStatus),
+                $processingStatus,
+            )->setIsCustomerNotified(false);
+            $order->save();
+        }
+
+        return true;
+    }
+
+    /**
      * Capture payment — called by registerCaptureNotification() from webhook.
      *
      * @param Mage_Sales_Model_Order_Payment $payment
