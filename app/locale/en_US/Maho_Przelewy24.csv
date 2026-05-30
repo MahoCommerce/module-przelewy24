@@ -5,6 +5,8 @@
 "Order #%s","Order #%s"
 "Order status set to ""%s"" per Przelewy24 configuration.","Order status set to ""%s"" per Przelewy24 configuration."
 "Paid (processing) order status","Paid (processing) order status"
+"Payment Method","Payment Method"
+"Payment was not completed.","Payment was not completed."
 "Pending-payment order status","Pending-payment order status"
 "Please complete the Przelewy24 payment before placing the order.","Please complete the Przelewy24 payment before placing the order."
 "Przelewy24","Przelewy24"
@@ -16,4 +18,3 @@
 "Session ID","Session ID"
 "Statement","Statement"
 "Unable to initialize payment. Please try again.","Unable to initialize payment. Please try again."
-"Payment was not completed.","Payment was not completed."

@@ -113,6 +113,55 @@ class Maho_Przelewy24_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
     /**
+     * Resolve the human-readable name of a P24 payment method from its numeric id.
+     *
+     * P24 reports only a numeric method id on a transaction; the names come from a
+     * separate endpoint. That list rarely changes, so it's cached per store/language
+     * for a day. Returns '' when the id can't be resolved (unknown id, API error) —
+     * callers fall back to showing the raw id and must never let this break a capture.
+     */
+    public function getPaymentMethodName(int $methodId, ?int $storeId = null): string
+    {
+        if ($methodId <= 0) {
+            return '';
+        }
+
+        $lang = $this->getLanguage();
+        $cacheId = "przelewy24_payment_methods_{$storeId}_{$lang}";
+
+        $methods = null;
+        $cached = Mage::app()->loadCache($cacheId);
+        if (is_string($cached) && $cached !== '') {
+            $methods = json_decode($cached, true);
+        }
+
+        if (!is_array($methods)) {
+            try {
+                /** @var Maho_Przelewy24_Model_Api $api */
+                $api = Mage::getModel('maho_przelewy24/api', ['store_id' => (int) $storeId]);
+                $methods = $api->getPaymentMethods($lang);
+                Mage::app()->saveCache(
+                    (string) json_encode($methods),
+                    $cacheId,
+                    [Mage_Core_Model_Config::CACHE_TAG],
+                    86400,
+                );
+            } catch (\Throwable $e) {
+                Mage::logException($e);
+                return '';
+            }
+        }
+
+        foreach ($methods as $method) {
+            if ((int) ($method['id'] ?? 0) === $methodId) {
+                return (string) ($method['name'] ?? '');
+            }
+        }
+
+        return '';
+    }
+
+    /**
      * Status code applied while the customer is at the P24 checkout.
      * Falls back to 'pending_payment' if the config is missing.
      */

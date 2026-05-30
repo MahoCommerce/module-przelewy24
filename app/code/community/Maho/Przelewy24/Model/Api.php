@@ -113,6 +113,21 @@ class Maho_Przelewy24_Model_Api
     }
 
     /**
+     * List the payment methods available for the merchant in the given language.
+     *
+     * Used to translate the numeric method id P24 reports for a transaction into
+     * a human-readable name (e.g. "mBank", "BLIK").
+     *
+     * @return array<int, array{id: int, name: string}> The raw method entries from P24
+     * @throws Mage_Core_Exception
+     */
+    public function getPaymentMethods(string $lang): array
+    {
+        $response = $this->_request('GET', '/api/v1/payment/methods/' . urlencode($lang));
+        return $response['data'] ?? [];
+    }
+
+    /**
      * Perform an HTTP request to the Przelewy24 API.
      *
      * @throws Mage_Core_Exception

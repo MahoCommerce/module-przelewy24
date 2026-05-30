@@ -177,7 +177,7 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
      * returned. When the amount checks out it optionally verifies, captures
      * the payment, and applies the merchant-configured processing status.
      *
-     * @param array{orderId?: int, amount?: int, currency?: string, methodId?: mixed, statement?: mixed} $transaction
+     * @param array{orderId?: int, amount?: int, currency?: string, methodId?: int, statement?: string} $transaction
      * @return bool true when the payment was captured, false when rejected
      */
     public function captureOrder(Mage_Sales_Model_Order $order, array $transaction, bool $verify): bool
@@ -231,11 +231,20 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
         }
 
         $payment->setAdditionalInformation('p24_order_id', $p24OrderId);
-        if (array_key_exists('methodId', $transaction)) {
-            $payment->setAdditionalInformation('p24_method_id', $transaction['methodId']);
+        $methodId = (int) ($transaction['methodId'] ?? 0);
+        if ($methodId > 0) {
+            $payment->setAdditionalInformation('p24_method_id', $methodId);
+            // Resolve the numeric id to a name (e.g. "mBank", "BLIK") for display.
+            // Never let a name lookup abort the capture — the helper returns ''
+            // (and the info block falls back to the id) on any failure.
+            $methodName = $helper->getPaymentMethodName($methodId, $storeId);
+            if ($methodName !== '') {
+                $payment->setAdditionalInformation('p24_method_name', $methodName);
+            }
         }
-        if (array_key_exists('statement', $transaction)) {
-            $payment->setAdditionalInformation('p24_statement', $transaction['statement']);
+        $statement = (string) ($transaction['statement'] ?? '');
+        if ($statement !== '') {
+            $payment->setAdditionalInformation('p24_statement', $statement);
         }
         $payment->save();
 

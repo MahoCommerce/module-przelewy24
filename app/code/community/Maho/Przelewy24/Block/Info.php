@@ -26,6 +26,16 @@ class Maho_Przelewy24_Block_Info extends Mage_Payment_Block_Info
             $data[$helper->__('Przelewy24 Order ID')] = $p24OrderId;
         }
 
+        // Which method the customer actually paid with (bank transfer, BLIK, card...).
+        // Prefer the resolved name; fall back to the raw id if it couldn't be resolved.
+        $methodName = $payment->getAdditionalInformation('p24_method_name');
+        $methodId = $payment->getAdditionalInformation('p24_method_id');
+        if ($methodName) {
+            $data[$helper->__('Payment Method')] = $methodName;
+        } elseif ($methodId) {
+            $data[$helper->__('Payment Method')] = $methodId;
+        }
+
         $sessionId = $payment->getAdditionalInformation('p24_session_id');
         if ($sessionId) {
             $data[$helper->__('Session ID')] = $sessionId;
