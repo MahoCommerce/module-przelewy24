@@ -99,6 +99,11 @@ class Maho_Przelewy24_Model_Cron
                 'orderId' => (int) ($result['data']['orderId'] ?? 0),
                 'amount' => (int) ($result['data']['amount'] ?? 0),
                 'currency' => $result['data']['currency'] ?? $order->getOrderCurrencyCode(),
+                // The by-sessionId response calls the chosen method "paymentMethod"
+                // (the webhook calls it "methodId"). Capture it here too so the
+                // method is recorded even when the webhook never reaches us.
+                'methodId' => (int) ($result['data']['paymentMethod'] ?? 0),
+                'statement' => $result['data']['statement'] ?? null,
             ], $status === 1);
 
             if ($captured) {

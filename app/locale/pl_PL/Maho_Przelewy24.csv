@@ -5,6 +5,7 @@
 "Order #%s","Zamówienie #%s"
 "Order status set to ""%s"" per Przelewy24 configuration.","Status zamówienia ustawiony na ""%s"" zgodnie z konfiguracją Przelewy24."
 "Paid (processing) order status","Status zamówienia po opłaceniu (processing)"
+"Payment Method","Metoda płatności"
 "Pending-payment order status","Status zamówienia oczekującego na płatność"
 "Please complete the Przelewy24 payment before placing the order.","Przed złożeniem zamówienia dokończ płatność Przelewy24."
 "Przelewy24","Przelewy24"
