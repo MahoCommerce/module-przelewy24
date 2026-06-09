@@ -23,7 +23,7 @@ Accept payments through [Przelewy24](https://www.przelewy24.pl), one of Poland's
 ## Requirements
 
 - PHP >= 8.3
-- Maho Commerce
+- Maho Commerce >= 26.5.0
 - A [Przelewy24](https://www.przelewy24.pl) merchant account
 
 ## Installation

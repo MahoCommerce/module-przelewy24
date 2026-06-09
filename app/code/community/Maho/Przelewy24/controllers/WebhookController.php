@@ -18,6 +18,7 @@ class Maho_Przelewy24_WebhookController extends Mage_Core_Controller_Front_Actio
      * P24 sends this after the customer completes payment. We verify the signature,
      * call the verify endpoint to confirm the transaction, then capture the payment.
      */
+    #[Maho\Config\Route('/przelewy24/webhook/transaction')]
     public function transactionAction(): void
     {
         if (!$this->getRequest()->isPost()) {
@@ -126,6 +127,7 @@ class Maho_Przelewy24_WebhookController extends Mage_Core_Controller_Front_Actio
     /**
      * Handle refund webhook from Przelewy24.
      */
+    #[Maho\Config\Route('/przelewy24/webhook/refund')]
     public function refundAction(): void
     {
         if (!$this->getRequest()->isPost()) {

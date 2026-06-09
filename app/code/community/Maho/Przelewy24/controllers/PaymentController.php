@@ -15,6 +15,7 @@ class Maho_Przelewy24_PaymentController extends Mage_Core_Controller_Front_Actio
     /**
      * Register the transaction with P24 and redirect the customer to their hosted payment page.
      */
+    #[Maho\Config\Route('/przelewy24/payment/redirect')]
     public function redirectAction(): void
     {
         $session = Mage::getSingleton('checkout/session');
@@ -65,6 +66,7 @@ class Maho_Przelewy24_PaymentController extends Mage_Core_Controller_Front_Actio
      * for the urlStatus webhook, which may be delayed or unreachable (sandbox,
      * local dev, firewalled servers).
      */
+    #[Maho\Config\Route('/przelewy24/payment/success')]
     public function successAction(): void
     {
         $session = Mage::getSingleton('checkout/session');
@@ -105,6 +107,7 @@ class Maho_Przelewy24_PaymentController extends Mage_Core_Controller_Front_Actio
     /**
      * Customer cancelled payment on P24 side.
      */
+    #[Maho\Config\Route('/przelewy24/payment/cancel')]
     public function cancelAction(): void
     {
         $session = Mage::getSingleton('checkout/session');
