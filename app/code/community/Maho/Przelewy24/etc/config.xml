@@ -11,7 +11,7 @@
 <config>
     <modules>
         <Maho_Przelewy24>
-            <version>2.4.0</version>
+            <version>3.0.0</version>
         </Maho_Przelewy24>
     </modules>
 
@@ -41,29 +41,7 @@
         </payment>
     </global>
 
-    <crontab>
-        <jobs>
-            <maho_przelewy24_check_pending_payments>
-                <schedule>
-                    <cron_expr>*/5 * * * *</cron_expr>
-                </schedule>
-                <run>
-                    <model>maho_przelewy24/cron::checkPendingPayments</model>
-                </run>
-            </maho_przelewy24_check_pending_payments>
-        </jobs>
-    </crontab>
-
     <frontend>
-        <routers>
-            <przelewy24>
-                <use>standard</use>
-                <args>
-                    <module>Maho_Przelewy24</module>
-                    <frontName>przelewy24</frontName>
-                </args>
-            </przelewy24>
-        </routers>
         <secure_url>
             <maho_przelewy24_payment>/przelewy24/payment</maho_przelewy24_payment>
             <maho_przelewy24_webhook>/przelewy24/webhook</maho_przelewy24_webhook>
