@@ -82,16 +82,29 @@ class Maho_Przelewy24_PaymentController extends Mage_Core_Controller_Front_Actio
                 Mage::logException($e);
             }
 
-            // Either P24 reported the payment as returned (status 3, already
-            // cancelled by processPaymentStatus) or the customer came back
-            // without paying (status 0 — left order in pending_payment).
-            // Both mean: don't show success, restore cart, bounce to checkout.
-            if ($order->isCanceled()
-                || $order->getState() === Mage_Sales_Model_Order::STATE_PENDING_PAYMENT
-            ) {
-                $this->_restoreCart($order);
+            // P24 reported the payment as returned (status 3): the order was
+            // already cancelled by processPaymentStatus, so just give the
+            // customer their cart back.
+            if ($order->isCanceled()) {
+                $this->_reactivateQuote($order);
                 Mage::getSingleton('core/session')->addError(
                     Mage::helper('maho_przelewy24')->__('Payment was not completed.'),
+                );
+                $this->_redirect('checkout/cart');
+                return;
+            }
+
+            // Status 0: P24 hasn't seen the money *yet*. This does NOT mean the
+            // customer abandoned payment — several P24 methods are asynchronous
+            // and the funds can land minutes after the redirect back, so the
+            // order must stay in pending_payment for the webhook/cron to
+            // finalize; cancelling it here would strand the payment at P24.
+            // Reactivate the quote (without cancelling) so a customer who
+            // really did abandon can retry checkout.
+            if ($order->getState() === Mage_Sales_Model_Order::STATE_PENDING_PAYMENT) {
+                $this->_reactivateQuote($order);
+                Mage::getSingleton('core/session')->addNotice(
+                    Mage::helper('maho_przelewy24')->__('Your payment has not been confirmed yet. If you completed the payment, your order will be processed automatically as soon as Przelewy24 confirms it.'),
                 );
                 $this->_redirect('checkout/cart');
                 return;
@@ -125,6 +138,11 @@ class Maho_Przelewy24_PaymentController extends Mage_Core_Controller_Front_Actio
     protected function _restoreCart(Mage_Sales_Model_Order $order): void
     {
         $order->cancel()->save();
+        $this->_reactivateQuote($order);
+    }
+
+    protected function _reactivateQuote(Mage_Sales_Model_Order $order): void
+    {
         $quote = Mage::getModel('sales/quote')->load($order->getQuoteId());
         if ($quote->getId()) {
             $quote->setIsActive(1)->setReservedOrderId('')->save();

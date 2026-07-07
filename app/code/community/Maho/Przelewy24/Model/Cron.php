@@ -11,17 +11,29 @@ declare(strict_types=1);
 class Maho_Przelewy24_Model_Cron
 {
     /**
+     * How long an unpaid (P24 status 0) order may stay in pending_payment
+     * before the cron cancels it. Asynchronous P24 methods can confirm well
+     * after the customer returns to the store, so this must be generous
+     * enough to cover them; payments confirmed even later still hit the
+     * webhook, which logs a reconciliation warning for cancelled orders.
+     */
+    public const PAYMENT_EXPIRY_HOURS = 4;
+
+    /**
      * Check pending P24 payments and update their status.
      *
      * Runs every 5 minutes. Catches orders stuck in pending_payment (e.g. webhook
-     * failed to arrive) and verifies them against the P24 API.
+     * failed to arrive) and verifies them against the P24 API. The scan window is
+     * twice PAYMENT_EXPIRY_HOURS so every order gets cancelled once it expires
+     * before ageing out of the window.
      */
     #[Maho\Config\CronJob('maho_przelewy24_check_pending_payments', schedule: '*/5 * * * *')]
     public function checkPendingPayments(): void
     {
+        $windowHours = self::PAYMENT_EXPIRY_HOURS * 2;
         $orders = Mage::getModel('sales/order')->getCollection()
             ->addFieldToFilter('state', Mage_Sales_Model_Order::STATE_PENDING_PAYMENT)
-            ->addFieldToFilter('created_at', ['gteq' => date('Y-m-d H:i:s', strtotime('-24 hours'))])
+            ->addFieldToFilter('created_at', ['gteq' => date('Y-m-d H:i:s', strtotime("-{$windowHours} hours"))])
             ->setPageSize(50);
 
         $orders->getSelect()->join(
@@ -33,7 +45,9 @@ class Maho_Przelewy24_Model_Cron
 
         foreach ($orders as $order) {
             try {
-                $this->processPaymentStatus($order);
+                // Quiet: a still-unpaid order is the expected case on every
+                // 5-minute pass — logging it would flood przelewy24.log.
+                $this->processPaymentStatus($order, false);
             } catch (\Throwable $e) {
                 Mage::log(
                     "Przelewy24 cron: error checking order #{$order->getIncrementId()}: {$e->getMessage()}",
@@ -48,8 +62,13 @@ class Maho_Przelewy24_Model_Cron
      * Poll P24 for the transaction status of a pending order and finalize it
      * (capture or cancel). Called from cron and from the return-from-P24 flow,
      * so it must be a no-op for orders already past pending_payment.
+     *
+     * $logNoAction controls whether a still-unpaid order (status 0, not yet
+     * expired) writes a log line: useful on the customer-return flow where it
+     * documents *why* the customer was bounced back to the cart, pure noise
+     * on the recurring cron passes.
      */
-    public function processPaymentStatus(Mage_Sales_Model_Order $order): void
+    public function processPaymentStatus(Mage_Sales_Model_Order $order, bool $logNoAction = true): void
     {
         if ($order->getState() !== Mage_Sales_Model_Order::STATE_PENDING_PAYMENT) {
             return;
@@ -114,14 +133,11 @@ class Maho_Przelewy24_Model_Cron
                 );
             }
         } elseif ($status === 3) {
+            // No quote handling here: if the customer came back to the store,
+            // successAction already gave them their cart back; if they never
+            // came back, their session is gone and reactivating the quote
+            // hours later could even resurrect a cart they since re-ordered.
             $order->cancel()->save();
-
-            // Reactivate the quote so the customer can resume checkout (possibly
-            // with a different payment method) without having to rebuild their cart.
-            $quote = Mage::getModel('sales/quote')->load($order->getQuoteId());
-            if ($quote->getId()) {
-                $quote->setIsActive(1)->setReservedOrderId('')->save();
-            }
 
             Mage::log(
                 "Przelewy24: cancelled order #{$order->getIncrementId()} (payment returned)",
@@ -129,11 +145,31 @@ class Maho_Przelewy24_Model_Cron
                 'przelewy24.log',
             );
         } else {
-            Mage::log(
-                "Przelewy24: no action for order #{$order->getIncrementId()} (P24 status={$status})",
-                Mage::LOG_INFO,
-                'przelewy24.log',
-            );
+            // Status 0 means P24 hasn't seen the money *yet* — not that the
+            // customer abandoned payment. Asynchronous methods can confirm
+            // minutes (or longer) after the customer returns to the store, so
+            // the order must stay in pending_payment until either the webhook/
+            // cron captures it or the payment window has clearly expired.
+            $createdAt = $order->getCreatedAt();
+            if ($status === 0
+                && $createdAt !== null
+                && strtotime($createdAt) < strtotime('-' . self::PAYMENT_EXPIRY_HOURS . ' hours')
+            ) {
+                $order->cancel()->save();
+
+                Mage::log(
+                    "Przelewy24: cancelled order #{$order->getIncrementId()} "
+                    . '(payment never arrived within ' . self::PAYMENT_EXPIRY_HOURS . ' hours)',
+                    Mage::LOG_INFO,
+                    'przelewy24.log',
+                );
+            } elseif ($logNoAction) {
+                Mage::log(
+                    "Przelewy24: no action for order #{$order->getIncrementId()} (P24 status={$status})",
+                    Mage::LOG_INFO,
+                    'przelewy24.log',
+                );
+            }
         }
     }
 }
