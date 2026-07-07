@@ -59,11 +59,21 @@ class Maho_Przelewy24_WebhookController extends Mage_Core_Controller_Front_Actio
         // but don't re-process — registerCaptureNotification on an already-
         // captured order would flip it into PAYMENT_REVIEW with fraud flagged.
         if ($order->getState() !== Mage_Sales_Model_Order::STATE_PENDING_PAYMENT) {
-            Mage::log(
-                "Przelewy24 webhook: order #{$order->getIncrementId()} already in state '{$order->getState()}', skipping",
-                Mage::LOG_INFO,
-                'przelewy24.log',
-            );
+            if ($order->isCanceled()) {
+                // The customer's money may be sitting at P24 for an order we
+                // already gave up on — that needs a human, so log loudly.
+                Mage::log(
+                    "Przelewy24 webhook: payment notification received for CANCELLED order #{$order->getIncrementId()} — manual reconciliation may be needed",
+                    Mage::LOG_WARNING,
+                    'przelewy24.log',
+                );
+            } else {
+                Mage::log(
+                    "Przelewy24 webhook: order #{$order->getIncrementId()} already in state '{$order->getState()}', skipping",
+                    Mage::LOG_INFO,
+                    'przelewy24.log',
+                );
+            }
             $this->getResponse()->setHttpResponseCode(200);
             return;
         }

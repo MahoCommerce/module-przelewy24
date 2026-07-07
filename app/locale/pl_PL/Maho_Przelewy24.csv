@@ -18,3 +18,4 @@
 "Statement","Tytuł przelewu"
 "Unable to initialize payment. Please try again.","Nie można zainicjalizować płatności. Spróbuj ponownie."
 "Payment was not completed.","Płatność nie została zrealizowana."
+"Your payment has not been confirmed yet. If you completed the payment, your order will be processed automatically as soon as Przelewy24 confirms it.","Twoja płatność nie została jeszcze potwierdzona. Jeśli płatność została dokonana, zamówienie zostanie przetworzone automatycznie, gdy tylko Przelewy24 ją potwierdzi."
