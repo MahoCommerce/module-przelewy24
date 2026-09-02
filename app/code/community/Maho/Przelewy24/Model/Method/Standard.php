@@ -269,6 +269,12 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
             $order->save();
         }
 
+        // Maho skips the new-order email at checkout for redirect gateways, so
+        // this is the only place the customer gets an order confirmation. It
+        // runs on every capture path (webhook, return from P24, cron) and is a
+        // no-op after the first one.
+        $helper->sendOrderConfirmationEmail($order);
+
         return true;
     }
 

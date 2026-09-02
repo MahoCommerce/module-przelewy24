@@ -160,6 +160,43 @@ class Maho_Przelewy24_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
     /**
+     * Send the new-order confirmation email, at most once per order.
+     *
+     * Maho deliberately skips this email at checkout for redirect-based gateways:
+     * Mage_Checkout_Model_Type_Onepage::saveOrder() only calls queueNewOrderEmail()
+     * when the payment method returns an empty getOrderPlaceRedirectUrl(). Przelewy24
+     * always redirects, so without this the customer never receives an order
+     * confirmation. Same approach as Mage_Paypal_Model_Ipn.
+     *
+     * The mail goes out once P24 confirms the payment, not at placement: every P24
+     * method is paid on the P24 page, so mailing at placement would also confirm
+     * checkouts the customer abandoned there. The email_sent flag — plus the core
+     * email queue's own duplicate check — makes sure the webhook, the return-from-P24
+     * flow and the cron fallback can't mail twice.
+     *
+     * Never throws: a mail failure must not abort the capture of a payment P24 has
+     * already confirmed.
+     */
+    public function sendOrderConfirmationEmail(Mage_Sales_Model_Order $order): void
+    {
+        if ($order->getEmailSent()) {
+            return;
+        }
+
+        try {
+            $order->queueNewOrderEmail();
+        } catch (\Throwable $e) {
+            Mage::logException($e);
+            Mage::log(
+                'Przelewy24: failed to send order confirmation email for order '
+                . "#{$order->getIncrementId()}: {$e->getMessage()}",
+                Mage::LOG_ERROR,
+                'przelewy24.log',
+            );
+        }
+    }
+
+    /**
      * Status code applied while the customer is at the P24 checkout.
      * Falls back to 'pending_payment' if the config is missing.
      */
