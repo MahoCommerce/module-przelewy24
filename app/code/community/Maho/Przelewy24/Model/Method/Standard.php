@@ -10,9 +10,12 @@ declare(strict_types=1);
 
 class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Abstract
 {
+    #[\Override]
     protected $_code = 'przelewy24';
 
+    #[\Override]
     protected $_formBlockType = 'maho_przelewy24/form';
+    #[\Override]
     protected $_infoBlockType = 'maho_przelewy24/info';
 
     /**
@@ -22,15 +25,25 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
      */
     protected string $_requiredCurrency = 'PLN';
 
+    #[\Override]
     protected $_isGateway = true;
+    #[\Override]
     protected $_canAuthorize = false;
+    #[\Override]
     protected $_canCapture = true;
+    #[\Override]
     protected $_canRefund = true;
+    #[\Override]
     protected $_canRefundInvoicePartial = true;
+    #[\Override]
     protected $_canVoid = false;
+    #[\Override]
     protected $_canUseInternal = false;
+    #[\Override]
     protected $_canUseCheckout = true;
+    #[\Override]
     protected $_isInitializeNeeded = true;
+    #[\Override]
     protected $_canFetchTransactionInfo = true;
 
     protected ?Maho_Przelewy24_Model_Api $_api = null;
