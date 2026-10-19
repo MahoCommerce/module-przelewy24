@@ -90,7 +90,7 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
                 }
             }
         } catch (\Throwable) {
-            $storeId = null;
+            // Keep $storeId null and fall back to the default scope.
         }
 
         $statusCode = $this->_getP24Helper()->getPendingStatus($storeId);
