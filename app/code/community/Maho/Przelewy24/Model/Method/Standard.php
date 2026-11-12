@@ -65,6 +65,7 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
     /**
      * Redirect URL returned to checkout JS after order placement.
      */
+    #[\Override]
     public function getOrderPlaceRedirectUrl(): string
     {
         return Mage::getUrl('przelewy24/payment/redirect', ['_secure' => true]);
@@ -131,7 +132,7 @@ class Maho_Przelewy24_Model_Method_Standard extends Mage_Payment_Model_Method_Ab
             Mage::throwException($helper->__('No payment found for order.'));
         }
 
-        $sessionId = $helper->generateSessionId($order->getIncrementId());
+        $sessionId = $helper->generateSessionId((string) $order->getIncrementId());
         $amount = $helper->toGrosze((float) $order->getGrandTotal());
         $currency = (string) $order->getOrderCurrencyCode();
 
