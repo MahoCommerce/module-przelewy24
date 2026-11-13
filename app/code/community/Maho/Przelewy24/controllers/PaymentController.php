@@ -113,7 +113,7 @@ class Maho_Przelewy24_PaymentController extends Mage_Core_Controller_Front_Actio
             }
         }
 
-        $session->getQuote()->setIsActive(0)->save();
+        $session->getQuote()->setIsActive(false)->save();
         $this->_redirect('checkout/onepage/success', ['_secure' => true]);
     }
 
@@ -142,7 +142,7 @@ class Maho_Przelewy24_PaymentController extends Mage_Core_Controller_Front_Actio
         $order->cancel()->save();
         $quote = Mage::getModel('sales/quote')->load($order->getQuoteId());
         if ($quote->getId()) {
-            $quote->setIsActive(1)->setReservedOrderId('')->save();
+            $quote->setIsActive(true)->setReservedOrderId('')->save();
             Mage::getSingleton('checkout/session')->replaceQuote($quote);
         }
     }

@@ -6,9 +6,12 @@
     "require": {
         "php": ">=8.5.1"
     },
+    "conflict": {
+        "mahocommerce/maho": "<26.11.1"
+    },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "*",
-        "mahocommerce/maho": ">=26.5.0",
+        "mahocommerce/maho": ">=26.11.1",
         "mahocommerce/maho-phpstan-plugin": "*",
         "phpstan/phpstan": "*",
         "phpstan/phpstan-deprecation-rules": "*",
@@ -22,5 +25,7 @@
         "platform": {
             "php": "8.5.1"
         }
-    }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }

@@ -198,7 +198,7 @@ class Maho_Przelewy24_WebhookController extends Mage_Core_Controller_Front_Actio
 
             $transaction = $payment->lookupTransaction($refundUuid, Mage_Sales_Model_Order_Payment_Transaction::TYPE_REFUND);
             if ($transaction) {
-                $transaction->setIsClosed(1)->save();
+                $transaction->setIsClosed(true)->save();
             }
 
             Mage::log("Przelewy24 refund webhook: refund confirmed for order #{$order->getIncrementId()}", Mage::LOG_INFO, 'przelewy24.log');
